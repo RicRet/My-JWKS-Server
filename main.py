@@ -1,3 +1,4 @@
+#import modules
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
@@ -11,17 +12,17 @@ import sqlite3
 hostName = "localhost"
 serverPort = 8080
 
-# Initialize SQLite database connection
+#initialize SQLite database connection
 conn = sqlite3.connect('totally_not_my_privateKeys.db')
 cursor = conn.cursor()
 
-# Create keys table if not exists
+#create keys table if not exists
 cursor.execute('''CREATE TABLE IF NOT EXISTS keys(
                     kid INTEGER PRIMARY KEY AUTOINCREMENT,
                     key BLOB NOT NULL,
                     exp INTEGER NOT NULL
                 )''')
-
+#generate private keys for signing
 private_key = rsa.generate_private_key(
     public_exponent=65537,
     key_size=2048,
@@ -31,7 +32,7 @@ expired_key = rsa.generate_private_key(
     key_size=2048,
 )
 
-# Serialize private keys to PEM format
+#serialize private keys to PEM format
 pem = private_key.private_bytes(
     encoding=serialization.Encoding.PEM,
     format=serialization.PrivateFormat.TraditionalOpenSSL,
@@ -45,7 +46,7 @@ expired_pem = expired_key.private_bytes(
 
 numbers = private_key.private_numbers()
 
-# Helper function to convert integer to Base64URL-encoded string
+#function to convert integer to Base64URL-encoded string
 def int_to_base64(value):
     value_hex = format(value, 'x')
     if len(value_hex) % 2 == 1:
@@ -54,7 +55,7 @@ def int_to_base64(value):
     encoded = base64.urlsafe_b64encode(value_bytes).rstrip(b'=')
     return encoded.decode('utf-8')
 
-
+#http handler class
 class MyServer(BaseHTTPRequestHandler):
     def do_PUT(self):
         self.send_response(405)
@@ -75,7 +76,7 @@ class MyServer(BaseHTTPRequestHandler):
         self.send_response(405)
         self.end_headers()
         return
-
+#handles post requests
     def do_POST(self):
         parsed_path = urlparse(self.path)
         params = parse_qs(parsed_path.query)
@@ -103,7 +104,7 @@ class MyServer(BaseHTTPRequestHandler):
         self.send_response(405)
         self.end_headers()
         return
-
+#handles get requests
     def do_GET(self):
         if self.path == "/.well-known/jwks.json":
             self.send_response(200)
@@ -128,8 +129,9 @@ class MyServer(BaseHTTPRequestHandler):
         self.end_headers()
         return
 
-
+#driver function
 if __name__ == "__main__":
+    #creates http helper class object
     webServer = HTTPServer((hostName, serverPort), MyServer)
     try:
         webServer.serve_forever()
